@@ -9,6 +9,9 @@ from aiogram import Router
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 BASE_URL = "https://api.b77bf911.workers.dev"
 
+# 👉 Yaha apne group ka ID daal
+ALLOWED_GROUP_ID = -1003744835264  # <-- CHANGE THIS
+
 if not BOT_TOKEN:
     print("❌ ERROR: BOT_TOKEN not set!")
     exit(1)
@@ -87,6 +90,16 @@ async def commands_handler(msg: types.Message):
         return
 
     cmd = text[0][1:]
+
+    # 🟢 Private chat allowed
+    if msg.chat.type == "private":
+        pass
+
+    # 🟢 Your group allowed
+    elif msg.chat.type in ("group", "supergroup"):
+        if msg.chat.id != ALLOWED_GROUP_ID:
+            return  # ❌ ignore other groups
+
     if cmd not in commands_map:
         return
 
