@@ -1,20 +1,23 @@
 import os
+import asyncio
 import requests
 from aiogram import Bot, Dispatcher, types
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
-from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram import Router
-from aiogram.utils.formatting import as_markdown
-import asyncio
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 BASE_URL = "https://api.b77bf911.workers.dev"
+
+if not BOT_TOKEN:
+    print("❌ ERROR: BOT_TOKEN not set!")
+    exit(1)
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 router = Router()
 dp.include_router(router)
+
 
 def format_json(data, level=0):
     indent = "  " * level
@@ -34,12 +37,13 @@ def format_json(data, level=0):
         formatted += f"{indent}{data}\n"
     return formatted
 
+
 def pretty(data):
     try:
-        text = format_json(data)
-        return f"```\n{text}\n```"
+        return f"```\n{format_json(data)}\n```"
     except:
         return str(data)
+
 
 async def fetch(endpoint, key, value):
     try:
@@ -49,16 +53,19 @@ async def fetch(endpoint, key, value):
     except Exception as e:
         return {"error": str(e)}
 
+
 @router.message(Command("start"))
-async def start(msg: types.Message):
+async def start_cmd(msg: types.Message):
     await msg.answer(
         "**Welcome to Data Lookup Bot!**\n"
         "Commands:\n"
-        "📱 /mobile\n🆔 /aadhaar\n🧾 /gst\n🪪 /pan\n🚘 /vehicle\n🏦 /ifsc\n💬 /telegram\n💳 /upi\n💳 /upi2\n🍚 /rashan\n🔍 /v2",
+        "📱 /mobile\n🆔 /aadhaar\n🧾 /gst\n🪪 /pan\n🚘 /vehicle\n🏦 /ifsc\n💬 /telegram\n💳 /upi\n💳 /upi2\n🍚 /rashan\n🔍 /v2\n\n"
+        "Example: `/mobile 9876543210`",
         parse_mode=ParseMode.MARKDOWN
     )
 
-CMD_LIST = {
+
+commands_map = {
     "mobile": ("mobile", "number"),
     "aadhaar": ("aadhaar", "id"),
     "gst": ("gst", "number"),
@@ -69,24 +76,32 @@ CMD_LIST = {
     "upi": ("upi", "id"),
     "upi2": ("upi2", "id"),
     "rashan": ("rashan", "aadhaar"),
-    "v2": ("v2", "query")
+    "v2": ("v2", "query"),
 }
 
+
 @router.message()
-async def all_commands(msg: types.Message):
+async def commands_handler(msg: types.Message):
     text = msg.text.split(maxsplit=1)
-    cmd = text[0][1:] if text[0].startswith("/") else None
-    
-    if cmd in CMD_LIST:
-        if len(text) < 2:
-            return await msg.answer(f"Usage: `/{cmd} <value>`", parse_mode=ParseMode.MARKDOWN)
-        
-        endpoint, param = CMD_LIST[cmd]
-        data = await fetch(endpoint, param, text[1])
-        return await msg.answer(pretty(data), parse_mode=ParseMode.MARKDOWN)
+    if not text[0].startswith("/"):
+        return
+
+    cmd = text[0][1:]
+    if cmd not in commands_map:
+        return
+
+    if len(text) < 2:
+        return await msg.answer(f"Usage: `/{cmd} <value>`", parse_mode=ParseMode.MARKDOWN)
+
+    endpoint, param = commands_map[cmd]
+    data = await fetch(endpoint, param, text[1])
+    await msg.answer(pretty(data), parse_mode=ParseMode.MARKDOWN)
+
 
 async def main():
+    print("🚀 BOT STARTED & POLLING...")
     await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
